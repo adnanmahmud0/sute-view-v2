@@ -1,0 +1,47 @@
+name: Production Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for rollback"
+        required: false
+        default: "Manual rollback triggered"
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Execute Instant Blue/Green Rollback
+    runs-on: ubuntu-latest
+    steps:
+      - name: Revert Traffic to Previous Slot
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST || secrets.EC2_HOST }}
+          username: ${{ secrets.SERVER_USER || secrets.EC2_USER || 'ubuntu' }}
+          key: ${{ secrets.SERVER_SSH_KEY || secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            PROJECT_SLUG="${{ vars.PROJECT_SLUG || 'fullstack' }}"
+            export PROJECT_SLUG
+            export DOMAIN="${{ vars.DOMAIN || 'example.com' }}"
+            export API_SUBDOMAIN="${{ vars.API_SUBDOMAIN || 'api' }}"
+            export ADMIN_SUBDOMAIN="${{ vars.ADMIN_SUBDOMAIN || 'admin' }}"
+            export HAS_API="$([ -f /opt/${PROJECT_SLUG}/state/api.slot ] && echo true || echo false)"
+            export HAS_ADMIN="$([ -f /opt/${PROJECT_SLUG}/state/admin.slot ] && echo true || echo false)"
+            export HAS_WEB="$([ -f /opt/${PROJECT_SLUG}/state/web.slot ] && echo true || echo false)"
+
+            "/opt/${PROJECT_SLUG}/deploy/rollback.sh"
+
+      - name: Publish Rollback Summary
+        run: |
+          cat << 'SUMMARY_EOF' >> "$GITHUB_STEP_SUMMARY"
+          ### 🔄 Rollback Executed Successfully
+
+          - **Triggered by**: ${{ github.actor }}
+          - **Reason**: ${{ github.event.inputs.reason }}
+          - **Target**: Previous blue/green standby slot restored as primary upstream.
+          SUMMARY_EOF

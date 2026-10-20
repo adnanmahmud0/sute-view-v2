@@ -1,0 +1,73 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect Active Apps
+    runs-on: ubuntu-latest
+    outputs:
+      has_web: ${{ steps.detect.outputs.has_web }}
+      has_admin: ${{ steps.detect.outputs.has_admin }}
+      has_api: ${{ steps.detect.outputs.has_api }}
+      has_expo: ${{ steps.detect.outputs.has_expo }}
+      has_flutter: ${{ steps.detect.outputs.has_flutter }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          echo "has_web=$([ -d apps/web ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "has_admin=$([ -d apps/admin ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "has_api=$([ -d apps/api ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "has_expo=$([ -d apps/expo ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "has_flutter=$([ -d apps/flutter ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  quality:
+    name: Lint, Typecheck & Build
+    needs: detect
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Monorepo
+        uses: ./.github/actions/setup-monorepo
+
+      - name: Lint Workspace Packages
+        run: npm run lint
+
+      - name: Typecheck Workspace Packages
+        run: npm run typecheck
+
+      - name: Build Monorepo Workspaces
+        run: npm run build
+
+  flutter-check:
+    name: Flutter Lint & Tests
+    needs: detect
+    if: needs.detect.outputs.has_flutter == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+      - name: Flutter Dependencies
+        run: flutter pub get
+        working-directory: apps/flutter
+
+      - name: Flutter Analyze
+        run: flutter analyze
+        working-directory: apps/flutter
+
+      - name: Flutter Tests
+        run: flutter test
+        working-directory: apps/flutter

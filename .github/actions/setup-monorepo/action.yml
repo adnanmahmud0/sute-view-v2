@@ -1,0 +1,34 @@
+name: "Setup Turborepo Monorepo"
+description: "Configures Node.js, caches npm dependencies and Turborepo artifacts, and runs npm ci"
+
+inputs:
+  node-version:
+    description: "Node.js version"
+    required: false
+    default: "22"
+  turbo-cache:
+    description: "Enable Turborepo cache"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "npm"
+
+    - name: Turborepo Cache
+      if: inputs.turbo-cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: .turbo
+        key: ${{ runner.os }}-turbo-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-turbo-
+
+    - name: Install Monorepo Dependencies
+      shell: bash
+      run: npm ci --ignore-scripts

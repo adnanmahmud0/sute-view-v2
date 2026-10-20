@@ -1,0 +1,15 @@
+**/.git
+**/.github
+**/.turbo
+**/node_modules
+**/.next
+**/dist
+**/winston
+**/uploads
+**/build
+**/.dart_tool
+out
+.env
+.env.local
+.env.*.local
+*.log

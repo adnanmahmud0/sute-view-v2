@@ -1,0 +1,100 @@
+name: Create Project from Template Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Select Template Variant Branch"
+        required: true
+        type: choice
+        default: "main"
+        options:
+          - "main"
+          - "expo-web-admin-api"
+          - "expo-web-api"
+          - "flutter-web-admin-api"
+          - "flutter-web-api"
+          - "web-admin-api"
+          - "web-api"
+      repo_name:
+        description: "New Repository Name (e.g. my-new-saas)"
+        required: true
+        type: string
+      visibility:
+        description: "Repository Visibility"
+        required: true
+        type: choice
+        default: "private"
+        options:
+          - "private"
+          - "public"
+      description:
+        description: "Repository Description (Optional)"
+        required: false
+        type: string
+        default: "Bootstrapped from fullstack-turborepo-starter-kit-v2"
+
+jobs:
+  create-repository:
+    name: Generate & Push New Repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Personal Access Token (GH_PAT)
+        id: check-token
+        run: |
+          if [ -z "${{ secrets.GH_PAT }}" ]; then
+            echo "::error::Secret 'GH_PAT' (GitHub Personal Access Token with repo scope) is required to create repositories on your behalf."
+            echo "Please go to Settings > Secrets and variables > Actions > New repository secret, name it 'GH_PAT', and paste your Personal Access Token."
+            exit 1
+          fi
+
+      - name: Create New Repository on GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO_NAME: ${{ github.event.inputs.repo_name }}
+          VISIBILITY: ${{ github.event.inputs.visibility }}
+          DESC: ${{ github.event.inputs.description }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          echo "Creating repository: $OWNER/$REPO_NAME ($VISIBILITY)..."
+          gh repo create "$OWNER/$REPO_NAME" "--$VISIBILITY" --description "$DESC" || true
+
+      - name: Clone Chosen Template Branch & Push as Main
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          BRANCH: ${{ github.event.inputs.branch }}
+          REPO_NAME: ${{ github.event.inputs.repo_name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          echo "Cloning branch '$BRANCH'..."
+          git clone --depth 1 --branch "$BRANCH" "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" /tmp/fresh-repo
+
+          cd /tmp/fresh-repo
+          rm -rf .git
+
+          # Initialize clean git history on main
+          git init -b main
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${REPO_NAME}.git"
+
+          # Update package.json name
+          if [ -f "package.json" ]; then
+            node -e "
+              const fs = require('fs');
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              pkg.name = '${REPO_NAME}';
+              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            "
+          fi
+
+          git add .
+          git commit -m "feat: initial commit from ${BRANCH} starter template"
+          git push -u origin main --force
+
+          echo "## 🎉 Repository Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "Your new repository is ready: [https://github.com/${OWNER}/${REPO_NAME}](https://github.com/${OWNER}/${REPO_NAME})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Template Branch Source:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Default Branch:** \`main\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Visibility:** \`${{ github.event.inputs.visibility }}\`" >> $GITHUB_STEP_SUMMARY

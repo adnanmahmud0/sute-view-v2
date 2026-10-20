@@ -1,0 +1,40 @@
+name: "${PROJECT_SLUG:-fullstack}-infra"
+
+networks:
+  app-net:
+    name: "${PROJECT_SLUG:-fullstack}-net"
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: "${PROJECT_SLUG:-fullstack}-postgres"
+    restart: always
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-fullstack_db}"
+      POSTGRES_USER: "${POSTGRES_USER:-postgres}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c work_mem=16MB
+      -c maintenance_work_mem=64MB
+      -c max_connections=100
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-fullstack_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: "${PROJECT_SLUG:-fullstack}-postgres-data"

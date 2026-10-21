@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "dotenv -e ../../.env -- next dev --port 8001",
-    "build": "dotenv -e ../../.env -- next build",
+    "build": "next build",
     "start": "dotenv -e ../../.env -- next start --port 8001",
     "analyze": "cross-env ANALYZE=true next build --webpack && open .next/analyze/nodejs.html",
     "clean": "rimraf .next",

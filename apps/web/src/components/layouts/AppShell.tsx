@@ -11,9 +11,13 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const isFullScreenPage = pathname === "/full-suit" || pathname?.startsWith("/full-suit/");
+  const isFullScreenPage =
+    pathname === "/full-suit" ||
+    pathname?.startsWith("/full-suit/") ||
+    pathname === "/appointment" ||
+    pathname?.startsWith("/appointment/");
 
-  // On full page configurator (e.g. /full-suit), hide navbar and footer completely
+  // On full page screens (e.g. /full-suit, /appointment), hide navbar and footer completely
   if (isFullScreenPage) {
     return <main className="h-screen w-full overflow-hidden">{children}</main>;
   }

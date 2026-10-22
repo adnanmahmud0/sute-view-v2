@@ -14,7 +14,8 @@ const OPTION_ITEMS: OptionItem[] = [
   { name: "FULL SUIT", href: "/full-suit" },
   { name: "JACKET", href: "/#option-jacket" },
   { name: "TROUSERS", href: "/#option-trousers" },
-  { name: "WAISTCOAT", href: "/#option-waistcoat" }
+  { name: "WAISTCOAT", href: "/#option-waistcoat" },
+  { name: "APPOINTMENT", href: "/appointment" }
 ];
 
 export function Header() {
@@ -156,6 +157,16 @@ export function Header() {
                 FABRIC
               </Link>
             </li>
+
+            {/* 5. APPOINTMENT */}
+            <li>
+              <Link
+                href="/appointment"
+                className="inline-block py-2 text-black transition-opacity hover:opacity-60"
+              >
+                APPOINTMENT
+              </Link>
+            </li>
           </ul>
         </div>
       </nav>
@@ -221,6 +232,17 @@ export function Header() {
                 className="flex items-center justify-between py-2.5 text-black transition-opacity hover:opacity-60"
               >
                 <span>FABRIC</span>
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </li>
+
+            <li>
+              <Link
+                href="/appointment"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between py-2.5 text-black transition-opacity hover:opacity-60"
+              >
+                <span>APPOINTMENT</span>
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </li>
